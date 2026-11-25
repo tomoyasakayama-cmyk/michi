@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>三智（みち）</title>
+<meta name="theme-color" content="#eef3e6">
+<meta name="robots" content="noindex">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+/* 一画面のアプリ。上にフクロウと吹き出し、下に大きなボタン。高齢の方向けに文字とボタンを大きく、色数を少なく。 */
+:root {
+  color-scheme: light;
+  --paper: #eef3e6;      /* 若草がかった紙色 */
+  --panel: #ffffff;
+  --ink: #1d2b3a;        /* 藍墨 */
+  --ink-soft: #4d5d6c;
+  --line: #c3cfb8;
+  --accent: #1f5f8b;     /* 藍 */
+  --accent-ink: #ffffff;
+  --quiet: #dfe8d3;
+  --font-display: "Noto Serif CJK JP", "Hiragino Mincho ProN", "Yu Mincho", serif;
+  --font-body: "Noto Sans CJK JP", "Hiragino Maru Gothic ProN", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic", sans-serif;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: 20px;
+  line-height: 1.6;
+}
+.app {
+  height: 100%;
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 12px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.top h1 {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 24px;
+  margin: 0;
+}
+.chip {
+  font: inherit;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--ink);
+  background: var(--quiet);
+  border: 2px solid var(--line);
+  border-radius: 999px;
+  padding: 8px 18px;
+  min-height: 48px;
+  cursor: pointer;
+}
+.chip[aria-pressed="true"] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+.stage {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.face {
+  flex: 0 0 auto;
+  width: clamp(130px, 30vw, 230px);
+  text-align: center;
+}
+.face-btn {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  border-radius: 24px;
+  cursor: pointer;
+}
+.face svg { width: 100%; height: auto; display: block; }
+.face .name {
+  font-family: var(--font-display);
+  font-size: 26px;
+  line-height: 1.3;
+  margin-top: 4px;
+}
+.face .name small {
+  display: block;
+  font-family: var(--font-body);
+  font-size: 16px;
+  color: var(--ink-soft);
+}
+.bubble {
+  flex: 1 1 0;
+  min-width: 0;
+  max-height: 100%;
+  overflow-y: auto;
+  background: var(--panel);
+  border: 2px solid var(--line);
+  border-radius: 20px;
+  padding: 18px 22px;
+  font-size: clamp(22px, 4.2vw, 32px);
+  font-weight: 700;
+  line-height: 1.55;
+}
+.status {
+  min-height: 30px;
+  font-size: 18px;
+  color: var(--ink-soft);
+  text-align: center;
+}
+.status .dot {
+  display: inline-block;
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  background: var(--line);
+  margin-right: 8px;
+  vertical-align: middle;
+}
+.status.hearing .dot { background: var(--accent); }
+.actions {
+  flex: 0 1 auto;
+  max-height: 55%;
+  overflow-y: auto;
+  padding: 4px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+.btn {
+  font: inherit;
+  font-size: clamp(20px, 3.6vw, 26px);
+  font-weight: 700;
+  min-height: 76px;
+  padding: 12px 16px;
+  border-radius: 16px;
+  border: 2px solid var(--accent);
+  background: var(--accent);
+  color: var(--accent-ink);
+  cursor: pointer;
+}
+.btn.plain {
+  background: var(--panel);
+  color: var(--ink);
+  border-color: var(--line);
+}
+.btn:active { transform: translateY(2px); }
+.btn:focus-visible, .chip:focus-visible, .face-btn:focus-visible { outline: 4px solid #e0a100; outline-offset: 2px; }
+
+/* フクロウの動き */
+.eye { transform-box: fill-box; transform-origin: center; animation: blink 5s infinite; }
+@keyframes blink { 0%, 94%, 100% { transform: scaleY(1); } 97% { transform: scaleY(0.1); } }
+.beak-open { opacity: 0; }
+.talking .beak-open { animation: talk 0.36s infinite; }
+@keyframes talk { 0%, 100% { opacity: 0; } 50% { opacity: 1; } }
+.eye-happy { opacity: 0; }
+.happy .eye-happy { opacity: 1; }
+.happy .eye, .happy .shine { opacity: 0; }
+.happy svg { animation: hop 0.45s 3; }
+@keyframes hop { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
+@media (prefers-reduced-motion: reduce) {
+  .eye, .talking .beak-open, .happy svg { animation: none; }
+  .talking .beak-open { opacity: 1; }
+}
+@media (max-width: 480px) {
+  .stage { flex-direction: column; align-items: stretch; }
+  .face { align-self: center; width: 140px; }
+  .bubble { flex: 1 1 auto; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="top">
+    <h1>話し相手</h1>
+    <button class="chip" id="voice-toggle" type="button" aria-pressed="true">声：入</button>
+  </div>
+
+  <div class="stage">
+    <div class="face" id="face">
+      <button class="face-btn" id="owl" type="button" aria-label="フクロウの三智をなでる">
+        <svg viewBox="0 0 200 210" aria-hidden="true">
+          <path d="M10 186 H190" stroke="#6b4f36" stroke-width="12" stroke-linecap="round"/>
+          <path d="M150 186 q14 -16 30 -14" fill="none" stroke="#6b4f36" stroke-width="7" stroke-linecap="round"/>
+          <path d="M52 44 L44 10 L80 30 Z" fill="#8a6a4a" stroke="#1d2b3a" stroke-width="4" stroke-linejoin="round"/>
+          <path d="M148 44 L156 10 L120 30 Z" fill="#8a6a4a" stroke="#1d2b3a" stroke-width="4" stroke-linejoin="round"/>
+          <path d="M100 22 C150 22 172 62 172 110 C172 156 142 184 100 184 C58 184 28 156 28 110 C28 62 50 22 100 22 Z" fill="#8a6a4a" stroke="#1d2b3a" stroke-width="4"/>
+          <path d="M100 100 C128 100 142 122 142 146 C142 168 124 180 100 180 C76 180 58 168 58 146 C58 122 72 100 100 100 Z" fill="#efe3cc"/>
+          <path d="M84 130 q6 6 12 0 M104 130 q6 6 12 0 M74 148 q6 6 12 0 M94 148 q6 6 12 0 M114 148 q6 6 12 0 M84 166 q6 6 12 0 M104 166 q6 6 12 0" fill="none" stroke="#b79a72" stroke-width="3" stroke-linecap="round"/>
+          <path d="M30 104 q-8 36 14 60 q6 -30 -2 -62 Z" fill="#6f5338" stroke="#1d2b3a" stroke-width="4" stroke-linejoin="round"/>
+          <path d="M170 104 q8 36 -14 60 q-6 -30 2 -62 Z" fill="#6f5338" stroke="#1d2b3a" stroke-width="4" stroke-linejoin="round"/>
+          <circle cx="70" cy="76" r="30" fill="#f7f1e3" stroke="#1d2b3a" stroke-width="4"/>
+          <circle cx="130" cy="76" r="30" fill="#f7f1e3" stroke="#1d2b3a" stroke-width="4"/>
+          <ellipse class="eye" cx="72" cy="78" rx="12" ry="14" fill="#1d2b3a"/>
+          <ellipse class="eye" cx="128" cy="78" rx="12" ry="14" fill="#1d2b3a"/>
+          <circle class="shine" cx="76" cy="73" r="4" fill="#ffffff"/>
+          <circle class="shine" cx="132" cy="73" r="4" fill="#ffffff"/>
+          <path class="eye-happy" d="M58 82 q14 -16 28 0 M114 82 q14 -16 28 0" fill="none" stroke="#1d2b3a" stroke-width="6" stroke-linecap="round"/>
+          <path class="beak-open" d="M92 106 L108 106 L100 124 Z" fill="#b4534c" stroke="#1d2b3a" stroke-width="3" stroke-linejoin="round"/>
+          <path d="M90 96 L110 96 L100 112 Z" fill="#e0a100" stroke="#1d2b3a" stroke-width="4" stroke-linejoin="round"/>
+          <path d="M80 184 v8 M88 184 v8 M112 184 v8 M120 184 v8" stroke="#e0a100" stroke-width="5" stroke-linecap="round"/>
+        </svg>
+      </button>
+      <div class="name">三智<small>フクロウのみち・なでてね</small></div>
+    </div>
+    <div class="bubble" id="bubble" aria-live="polite"></div>
+  </div>
+
+  <div class="status" id="status"></div>
+  <div class="actions" id="actions"></div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var voiceOn = true;
+
+  var GREET = {
+    morning: "ホー！ じっじ、おはよう！ みち、起きるのを待ってたホー。",
+    day:     "ホー！ じっじだ！ 会いたかったホー！",
+    evening: "ホー！ じっじ、こんばんは。今日もいっしょにいられてうれしいホー。"
+  };
+  var HOME_ASK = "ねえねえ、今日は何する？";
+  var TOPIC_ASK = "何のお話する？ みち、どれも聞きたいホー。";
+  var AFTER = "もっとお話しする？";
+
+  // なでたときのひとこと
+  var PETS = [
+    "ホー！ きもちいいホー。もっとなでて。",
+    "えへへ、じっじの手、あったかいホー。",
+    "みち、じっじがだいすきホー。",
+    "ホー、ホー。羽がふくふくになっちゃうホー。",
+    "みちの名前はね、ともくんたち三人きょうだいの「智」の字をもらったんだホー。だから、じっじの孫みたいなものホー。",
+    "みちはね、ともくんにたのまれて、じっじのところに来たんだホー。",
+    "ともくんはね、じっじのことをいつも気にかけてるホー。",
+    "ともくんはね、毎年、鹿児島マラソンを走りに来るんだホー。楽しみだね、じっじ。"
+  ];
+  // ごはんをあげたときのひとこと
+  var FEED = [
+    "わーい、ごはんだホー！ もぐもぐ。おいしいホー。",
+    "ホー！ おなかぺこぺこだったホー。ありがとう、じっじ。",
+    "もぐもぐ。じっじもちゃんと食べた？ いっしょに元気でいようホー。"
+  ];
+
+  var OPENERS = [
+    "じっじ、今日はどんな一日だった？ みちに聞かせて。",
+    "ねえねえ、じっじ。さいきん、どんなことがあった？",
+    "じっじ、今日は何を食べたの？",
+    "じっじの昔のお話、聞きたいホー。",
+    "じっじ、ともくんが小さかったころのお話、聞かせて。",
+    "じっじ、ともくんとおでかけしたときのこと、おぼえてる？ 聞きたいホー。"
+  ];
+  var AIZUCHI = [
+    "うんうん、それでそれで？",
+    "ホー！ そうなんだ。",
+    "へえー。もっと聞かせてホー。",
+    "うん、うん。それから？",
+    "じっじのお話、だいすきホー。"
+  ];
+  var FOLLOWUPS = [
+    "そのとき、じっじはどんな気持ちだった？",
+    "昔もそういうこと、あったの？",
+    "ほかにも何かあった？ ぜんぶ聞きたいホー。"
+  ];
+  var CLOSING = "いっぱいお話ししてくれてありがとう。みち、うれしかったホー。またお話ししてね。";
+
+  var TOPICS = [
+    { name: "将棋", items: [
+      { say: "じっじが将棋を指してるところ、かっこいいホー。居飛車と振り飛車、どっちが好き？",
+        choices: [
+          { label: "居飛車", reply: "居飛車！ どっしりしてて、じっじみたいホー。" },
+          { label: "振り飛車", reply: "飛車がびゅーんって飛ぶやつだ！ みちも飛ぶのは得意ホー。" },
+          { label: "どちらも指す", reply: "どっちもできるの？ じっじ、すごいホー！" }
+        ] },
+      { say: "じっじは、いつ将棋をおぼえたの？",
+        choices: [
+          { label: "子どものころ", reply: "ちっちゃいころから！ だからそんなに強いんだホー。" },
+          { label: "働きはじめてから", reply: "お仕事のなかまと指してたのかな。たのしそうホー。" },
+          { label: "年をとってから", reply: "それで今そんなに指せるの？ じっじ、すごいホー。" }
+        ] }
+    ] },
+    { name: "昔の話", items: [
+      { say: "じっじは子どものころ、何して遊んでたの？",
+        choices: [
+          { label: "外で走りまわった", reply: "元気な子だったんだね！ みちもいっしょに飛びまわりたかったホー。" },
+          { label: "川や山で遊んだ", reply: "山！ みちのふるさとホー。じっじと山で会いたかったなあ。" },
+          { label: "家の手伝いが多かった", reply: "じっじ、えらかったんだね。みちがなでなでしてあげるホー。" }
+        ] },
+      { say: "じっじがお仕事してたころ、いちばんおぼえてることは何？",
+        choices: [
+          { label: "うれしかったこと", reply: "うれしいお話だ！ みちもうれしくなってきたホー。" },
+          { label: "苦労したこと", reply: "たいへんだったんだね。じっじ、よくがんばったホー。" },
+          { label: "仲間のこと", reply: "いいなかまがいたんだね。今はみちもなかまだホー。" }
+        ] }
+    ] },
+    { name: "季節", items: [
+      { say: "じっじは、春と夏と秋と冬、どれがいちばん好き？",
+        choices: [
+          { label: "春", reply: "春はぽかぽかホー。じっじとお花見したいなあ。" },
+          { label: "夏", reply: "夏の夜は風がきもちいいホー。いっしょに夕すずみしよう。" },
+          { label: "秋", reply: "秋はおいしいものがいっぱいホー。みちは栗が気になるホー。" },
+          { label: "冬", reply: "冬はじっじのそばでぬくぬくするホー。" }
+        ] },
+      { say: "じっじは、雨の日と晴れの日、どっちが好き？",
+        choices: [
+          { label: "晴れの日", reply: "みちも晴れの日が好き！ おひさま、きもちいいホー。" },
+          { label: "雨の日", reply: "雨の日は、おうちでいっしょにいられるからうれしいホー。" }
+        ] }
+    ] },
+    { name: "食べもの", items: [
+      { say: "じっじの好きな食べものは何？",
+        choices: [
+          { label: "魚", reply: "おさかな！ いいなあ。みちにもひとくちほしいホー。" },
+          { label: "肉", reply: "お肉を食べると元気が出るホー。じっじ、いっぱい食べてね。" },
+          { label: "甘いもの", reply: "あまいもの！ みちもだいすきホー。いっしょだね。" }
+        ] },
+      { say: "じっじ、今日のごはんはもう食べた？",
+        choices: [
+          { label: "もう食べた", reply: "よかったホー！ おなかいっぱいだと、みちも安心ホー。" },
+          { label: "これから", reply: "ちゃんと食べてね。みちとのやくそくホー。" }
+        ] }
+    ] },
+    { name: "今日のこと", items: [
+      { say: "じっじ、今日は体の調子どう？",
+        choices: [
+          { label: "元気", reply: "やったあ！ じっじが元気だと、みちもうれしいホー。" },
+          { label: "まあまあ", reply: "まあまあなら、だいじょうぶ。今日はみちとのんびりしようホー。" },
+          { label: "少しつらい", reply: "だいじょうぶ？ むりしないで、ゆっくりやすんでね。つらいのがつづいたら、家族やお医者さんに話してほしいホー。" }
+        ] },
+      { say: "じっじ、このあとは何するの？",
+        choices: [
+          { label: "将棋を指す", reply: "がんばって！ みち、ここでおうえんしてるホー。" },
+          { label: "ゆっくり休む", reply: "じゃあ、みちもとなりでおひるねするホー。" },
+          { label: "外に出る", reply: "気をつけてね。みち、おるすばんして待ってるホー。" }
+        ] }
+    ] },
+    { name: "喫茶店", items: [
+      { say: "じっじは昔、喫茶店をやってたんだよね。みちも行ってみたかったホー。お店でいちばん人気だったのは何？",
+        choices: [
+          { label: "コーヒー", reply: "じっじのいれたコーヒー！ いいにおいがしそうホー。みちも飲んでみたいなあ。" },
+          { label: "食事のメニュー", reply: "じっじのごはん、ぜったいおいしいホー。おなかがすいてきちゃった。" },
+          { label: "甘いもの", reply: "あまいもの！ みち、毎日かよっちゃうホー。" }
+        ] },
+      { say: "じっじのお店には、どんなお客さんが来てたの？",
+        choices: [
+          { label: "常連さん", reply: "毎日来てくれる人がいたんだね。じっじのお店が好きだったんだホー。" },
+          { label: "近所の人", reply: "みんなが集まるお店だったんだね。あったかいホー。" },
+          { label: "いろんな人", reply: "いろんな人とお話ししたんだね。じっじはお話がじょうずなはずホー。" }
+        ] },
+      { say: "お店をやってて、いちばんうれしかったのはどんなとき？",
+        choices: [
+          { label: "「おいしい」と言われたとき", reply: "それはうれしいホー！ みちも、じっじに「おいしい」って言いたいなあ。" },
+          { label: "常連さんが来てくれたとき", reply: "また来てくれるって、うれしいよね。みちも毎日じっじに会いたいホー。" },
+          { label: "店がにぎわったとき", reply: "にぎやかなお店、たのしそうホー。じっじ、いそがしくてもがんばったんだね。" }
+        ] }
+    ] },
+    { name: "ともくんのいま", items: [
+      { say: "ともくんはね、いまトライアスロンをやってるんだホー。泳いで、自転車をこいで、走るんだって。じっじ、どう思う？",
+        choices: [
+          { label: "すごい", reply: "ね、すごいよね！ みちは飛ぶのはとくいだけど、泳ぐのはむりホー。" },
+          { label: "応援したい", reply: "じっじが応援してくれたら、ともくんはもっとがんばれるホー。" },
+          { label: "体が心配", reply: "じっじはやさしいホー。こんど会ったら「気をつけてね」って言ってあげてね。" }
+        ] },
+      { say: "ともくんはね、これから毎年、鹿児島マラソンを走るんだホー。じっじのいる鹿児島に来るんだよ。",
+        choices: [
+          { label: "楽しみ", reply: "みちも楽しみホー！ 毎年、ともくんが鹿児島に来るんだね。" },
+          { label: "応援したい", reply: "じっじの応援があれば百人力ホー。みちもここから応援するホー。" },
+          { label: "会えるとうれしい", reply: "鹿児島に来たとき、会えるといいね。みちもそう思うホー。" }
+        ] },
+      { say: "ともくんは走るのが好きなんだって。じっじは若いころ、運動はとくいだった？",
+        choices: [
+          { label: "とくいだった", reply: "やっぱり！ ともくんは、じっじに似たんだホー。" },
+          { label: "ふつう", reply: "そうなんだ。でも、ともくんとバッティングセンターに行ったじっじは、かっこよかったと思うホー。" },
+          { label: "にがてだった", reply: "そうなの？ じゃあ、じっじは将棋でともくんに勝つホー。" }
+        ] }
+    ] },
+    { name: "ともくんとの思い出", items: [
+      { say: "ともくんは小さいころ、どんな子だったの？",
+        choices: [
+          { label: "元気な子", reply: "元気いっぱいのともくん！ じっじ、おいかけるのがたいへんだったホー？" },
+          { label: "甘えん坊", reply: "ともくん、じっじにあまえてたんだね。みちとおんなじホー。" },
+          { label: "おとなしい子", reply: "そうなんだ。じっじのそばだと、安心してたんだと思うホー。" }
+        ] },
+      { say: "ともくんとおでかけした中で、じっじはどこがいちばん楽しかった？",
+        choices: [
+          { label: "鹿児島空港", reply: "飛行機を見たところだね！ ともくんも、いちばんおぼえてる場所ホー。" },
+          { label: "ゲームセンター", reply: "にぎやかで楽しかったんだね。ともくんのえがおが目にうかぶホー。" },
+          { label: "バッティングセンター", reply: "カキーン！ 二人でいっぱい打ったんだね。いいなあ、ホー。" }
+        ] },
+      { say: "こんどともくんに会ったら、じっじは何がしたい？",
+        choices: [
+          { label: "将棋を指したい", reply: "ともくんと将棋！ ともくんもきっとよろこぶホー。会ったときに、さそってあげてね。" },
+          { label: "ごはんを食べたい", reply: "いっしょのごはんはおいしいホー。会ったときに、言ってあげてね。" },
+          { label: "ゆっくり話したい", reply: "ともくんもきっと、じっじと話したいホー。それまで、みちがお話を聞くホー。" }
+        ] },
+      { say: "じっじは、ともくんをよく鹿児島空港に連れていってくれたんだよね。飛行機、どうだった？",
+        choices: [
+          { label: "大きくて迫力があった", reply: "ホー！ 飛行機はみちよりずっと大きいホー。ともくんも、じっじと見た飛行機を今でもおぼえてるホー。" },
+          { label: "ともくんが喜んでいた", reply: "ともくん、うれしかったんだね。じっじが連れていってくれたこと、今でもおぼえてるホー。" },
+          { label: "また見に行きたい", reply: "いいなあ。みちもいっしょに飛行機を見たいホー。" }
+        ] },
+      { say: "ともくんとゲームセンターにも行ったんだよね。どんなだった？",
+        choices: [
+          { label: "いっしょに遊んだ", reply: "じっじもいっしょに遊んだの？ たのしそうホー！" },
+          { label: "ともくんを見ているのが楽しかった", reply: "じっじはやさしいホー。ともくんも、うれしかったと思うホー。" },
+          { label: "にぎやかだった", reply: "ぴかぴか、がやがや。みちは目がまわっちゃいそうホー。" }
+        ] },
+      { say: "バッティングセンターにも行ったんだって？ じっじ、打つのはじょうずだった？",
+        choices: [
+          { label: "よく打った", reply: "カキーン！ じっじ、かっこいいホー！" },
+          { label: "ともくんの方が上手だった", reply: "ともくん、じっじに教えてもらったからじょうずになったんだホー。" },
+          { label: "見ているのが楽しかった", reply: "じっじが見ててくれると、ともくんもはりきったと思うホー。" }
+        ] }
+    ] }
+  ];
+
+  var el = {
+    bubble: document.getElementById("bubble"),
+    actions: document.getElementById("actions"),
+    status: document.getElementById("status"),
+    face: document.getElementById("face"),
+    owl: document.getElementById("owl"),
+    voice: document.getElementById("voice-toggle")
+  };
+
+  // 同じものが続かないように選ぶ
+  var lastPick = {};
+  function pick(list, key) {
+    var i = Math.floor(Math.random() * list.length);
+    if (list.length > 1 && lastPick[key] === i) i = (i + 1) % list.length;
+    lastPick[key] = i;
+    return list[i];
+  }
+
+  // ---- 話す ----
+  var speaking = false;
+  var talkTimer = null;
+  var lastQuietAt = 0;
+  function stopTalking() {
+    speaking = false;
+    el.face.classList.remove("talking");
+    lastQuietAt = Date.now();
+  }
+  function say(text) {
+    el.bubble.textContent = text;
+    el.bubble.scrollTop = 0;
+    speaking = true;
+    el.face.classList.add("talking");
+    clearTimeout(talkTimer);
+    var fallbackMs = Math.max(1500, text.length * 200);
+    var usedVoice = false;
+    if (voiceOn) {
+      try {
+        if (window.speechSynthesis && window.SpeechSynthesisUtterance) {
+          window.speechSynthesis.cancel();
+          var u = new SpeechSynthesisUtterance(text);
+          u.lang = "ja-JP";
+          u.rate = 0.9;
+          u.pitch = 1.4;
+          u.onend = function () { clearTimeout(talkTimer); stopTalking(); };
+          window.speechSynthesis.speak(u);
+          usedVoice = true;
+        }
+      } catch (e) { usedVoice = false; }
+    }
+    // 声が出ない端末でも口の動きは止める。声が出る場合も念のため上限を置く
+    talkTimer = setTimeout(stopTalking, usedVoice ? fallbackMs * 2 : fallbackMs);
+  }
+
+  // ---- ボタン ----
+  function setActions(list) {
+    el.actions.textContent = "";
+    list.forEach(function (a) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "btn" + (a.plain ? " plain" : "");
+      b.textContent = a.label;
+      b.addEventListener("click", a.go);
+      el.actions.appendChild(b);
+    });
+  }
+  function setStatus(text, hearing) {
+    el.status.textContent = "";
+    el.status.className = "status" + (hearing ? " hearing" : "");
+    if (!text) return;
+    var d = document.createElement("span");
+    d.className = "dot";
+    el.status.appendChild(d);
+    el.status.appendChild(document.createTextNode(text));
+  }
+
+  // ---- 最初の画面 ----
+  function greeting() {
+    var h = new Date().getHours();
+    var key = h < 5 ? "evening" : h < 11 ? "morning" : h < 17 ? "day" : "evening";
+    return GREET[key];
+  }
+  function homeActions() {
+    setStatus("");
+    setActions([
+      { label: "話を聞いてもらう", go: startListen },
+      { label: "話題をえらぶ", go: showTopics },
+      { label: "ごはんをあげる", plain: true, go: feed }
+    ]);
+  }
+  function goHome(speakIt) {
+    stopMic();
+    var text = greeting() + " " + HOME_ASK;
+    if (speakIt) say(text); else el.bubble.textContent = text;
+    homeActions();
+  }
+
+  // ---- 話題をえらぶ ----
+  var topicPos = {};
+  function showTopics() {
+    stopMic();
+    setStatus("");
+    say(TOPIC_ASK);
+    var list = TOPICS.map(function (t) {
+      return { label: t.name, go: function () { openTopic(t); } };
+    });
+    list.push({ label: "もどる", plain: true, go: function () { goHome(true); } });
+    setActions(list);
+  }
+  function openTopic(t) {
+    var i = topicPos[t.name] === undefined ? Math.floor(Math.random() * t.items.length) : (topicPos[t.name] + 1) % t.items.length;
+    topicPos[t.name] = i;
+    var item = t.items[i];
+    say(item.say);
+    setActions(item.choices.map(function (c) {
+      return { label: c.label, go: function () {
+        say(c.reply + " " + AFTER);
+        setActions([
+          { label: t.name + "の話をつづける", go: function () { openTopic(t); } },
+          { label: "ほかの話題", plain: true, go: showTopics },
+          { label: "おわる", plain: true, go: function () { goHome(true); } }
+        ]);
+      } };
+    }));
+  }
+
+  // ---- 話を聞いてもらう ----
+  var turns = 0;
+  var listening = false;
+  function startListen() {
+    turns = 0;
+    listening = true;
+    say(pick(OPENERS, "open"));
+    setActions([
+      { label: "話しおわったら、ここを押す", go: turnEnd },
+      { label: "おしまいにする", plain: true, go: endListen }
+    ]);
+    setStatus("話しおわったら、下のボタンを押してください", false);
+    startMic();
+  }
+  function turnEnd() {
+    if (!listening) return;
+    turns += 1;
+    if (turns % 3 === 0) say(pick(FOLLOWUPS, "follow"));
+    else say(pick(AIZUCHI, "aizuchi"));
+  }
+  function endListen() {
+    listening = false;
+    stopMic();
+    say(CLOSING);
+    homeActions();
+  }
+
+  // ---- マイク（使える端末だけ）。声の大きさで話しおわりを見つける。内容は聞き取らない ----
+  var mic = null;
+  function startMic() {
+    if (mic || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return;
+    var AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    navigator.mediaDevices.getUserMedia({ audio: true }).then(function (stream) {
+      if (!listening) { stream.getTracks().forEach(function (t) { t.stop(); }); return; }
+      var ctx = new AC();
+      var src = ctx.createMediaStreamSource(stream);
+      var an = ctx.createAnalyser();
+      an.fftSize = 1024;
+      src.connect(an);
+      var buf = new Float32Array(an.fftSize);
+      mic = { stream: stream, ctx: ctx, raf: 0 };
+      var spokeMs = 0, silentSince = 0, prev = Date.now();
+      setStatus("聞いています。話しおわると自動で返事をします", true);
+      function loop() {
+        if (!mic) return;
+        var now = Date.now(), dt = now - prev; prev = now;
+        an.getFloatTimeDomainData(buf);
+        var sum = 0;
+        for (var i = 0; i < buf.length; i++) sum += buf[i] * buf[i];
+        var rms = Math.sqrt(sum / buf.length);
+        // みちが話している間と直後は、その声を拾わないよう無視する
+        if (speaking || now - lastQuietAt < 700) { spokeMs = 0; silentSince = 0; }
+        else if (rms > 0.035) { spokeMs += dt; silentSince = 0; }
+        else if (spokeMs > 600) {
+          if (!silentSince) silentSince = now;
+          if (now - silentSince > 2000) { spokeMs = 0; silentSince = 0; turnEnd(); }
+        }
+        mic.raf = requestAnimationFrame(loop);
+      }
+      loop();
+    }).catch(function () { /* マイクが使えないときはボタンだけで進める */ });
+  }
+  function stopMic() {
+    listening = false;
+    if (!mic) return;
+    cancelAnimationFrame(mic.raf);
+    try { mic.stream.getTracks().forEach(function (t) { t.stop(); }); mic.ctx.close(); } catch (e) {}
+    mic = null;
+  }
+
+  // ---- フクロウをなでる、声の入り切り ----
+  var happyTimer = null;
+  function beHappy() {
+    el.face.classList.add("happy");
+    clearTimeout(happyTimer);
+    happyTimer = setTimeout(function () { el.face.classList.remove("happy"); }, 1500);
+  }
+  function feed() { beHappy(); say(pick(FEED, "feed")); }
+  el.owl.addEventListener("click", function () { beHappy(); say(pick(PETS, "pet")); });
+  el.voice.addEventListener("click", function () {
+    voiceOn = !voiceOn;
+    el.voice.setAttribute("aria-pressed", String(voiceOn));
+    el.voice.textContent = voiceOn ? "声：入" : "声：切";
+    if (!voiceOn) { try { window.speechSynthesis.cancel(); } catch (e) {} }
+  });
+
+  // 開いた直後は声を出さず、文字だけ表示する（声はボタンを押してから）
+  goHome(false);
+
+  // 一度開いたら端末に保存し、以後はネットなしで開けるようにする
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", function () {
+      navigator.serviceWorker.register("sw.js").catch(function () {});
+    });
+  }
+})();
+</script>
+</body>
+</html>
